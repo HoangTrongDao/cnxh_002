@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thi Thử CNXHKH - Mã đề 002</title>
+    <style>
+        :root { --primary: #6f42c1; --success: #198754; --danger: #dc3545; --light: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3e5f5; margin: 0; padding: 20px; padding-top: 80px; color: #333; }
+        
+        /* Thanh công cụ cố định phía trên */
+        .toolbar { position: fixed; top: 0; left: 0; right: 0; background: white; padding: 10px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 1000; display: flex; justify-content: space-between; align-items: center; }
+        .timer { font-size: 1.4em; font-weight: bold; color: #c62828; background: #ffcdd2; padding: 5px 15px; border-radius: 5px; border: 1px solid #ef9a9a; }
+        .exam-info { font-weight: bold; color: var(--primary); font-size: 1.1em; }
+        .btn-submit { background-color: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-submit:hover { background-color: #5e35b1; }
+
+        .container { max-width: 900px; margin: 0 auto; }
+        
+        /* Thẻ câu hỏi */
+        .question-card { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); }
+        .q-header { display: flex; justify-content: space-between; margin-bottom: 10px; color: #6c757d; font-size: 0.9em; font-weight: bold; }
+        .q-text { font-size: 1.1em; font-weight: 600; margin-bottom: 15px; line-height: 1.5; }
+        
+        /* Các lựa chọn */
+        .options-group { display: flex; flex-direction: column; gap: 8px; }
+        .option-label { display: flex; align-items: center; padding: 10px 15px; border: 1px solid #dee2e6; border-radius: 6px; cursor: pointer; transition: 0.2s; }
+        .option-label:hover { background-color: #e9ecef; }
+        .option-label input { margin-right: 12px; transform: scale(1.2); }
+        
+        /* Kết quả đúng sai */
+        .correct { background-color: #d1e7dd !important; border-color: #badbcc !important; color: #0f5132; }
+        .wrong { background-color: #f8d7da !important; border-color: #f5c2c7 !important; color: #842029; }
+        
+        /* Modal kết quả */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .modal-box { background: white; padding: 30px; border-radius: 10px; text-align: center; width: 350px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); animation: slideDown 0.3s ease; }
+        @keyframes slideDown { from {transform: translateY(-50px); opacity: 0;} to {transform: translateY(0); opacity: 1;} }
+        
+        .score-circle { width: 100px; height: 100px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-size: 2.5em; font-weight: bold; margin: 0 auto 20px; }
+    </style>
+</head>
+<body>
+
+<div class="toolbar">
+    <div class="exam-info">Mã đề: 002 (Khác đề 001)</div>
+    <div class="timer" id="timer">50:00</div>
+    <button class="btn-submit" onclick="finishExam()">Nộp Bài</button>
+</div>
+
+<div class="container" id="quizContainer"></div>
+
+<div class="modal-overlay" id="resultModal">
+    <div class="modal-box">
+        <h2 style="color: var(--primary); margin-top:0;">KẾT QUẢ</h2>
+        <div class="score-circle" id="scoreDisplay">0</div>
+        <p>Số câu đúng: <strong id="correctCount">0</strong> / 60</p>
+        <p id="feedbackText" style="color: #666; font-style: italic;"></p>
+        <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+            <button class="btn-submit" style="background: #6c757d;" onclick="closeModal()">Xem lại bài</button>
+            <button class="btn-submit" onclick="location.reload()">Làm lại</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Dữ liệu 60 câu hỏi MỚI (Mã đề 002)
+    // Đáp án trích xuất từ dữ liệu: (Ch1), (Ch2), (Ch3), (Ch4), (Ch5), (Ch6), (Ch7)
+    // Format: [Câu hỏi, [A, B, C, D], Index_Đáp_Án_Đúng (0=A, 1=B, 2=C, 3=D)]
+    
+    const questions = [
+        // CHƯƠNG 1
+        ["Phong trào đấu tranh của giai cấp vô sản vào những năm 30, 40 của thế kỷ XIX chứng tỏ rằng...", ["Giai cấp tư sản là một lực lượng chính trị độc lập", "Giai cấp vô sản là một lực lượng chính trị - xã hội độc lập", "Phong trào vô sản là một phong trào tự giác", "Giai cấp vô sản cần liên minh với địa chủ"], 1],
+        ["Những nhà chủ nghĩa xã hội không tưởng nào đã KHÔNG luận chứng được một cách khoa học về bản chất của CNTB?", ["A.Xmit và Đ. Ricácđô", "H.Xanh Ximông, S. Phuriê và R. Ôoen", "C. Mác và Ph. Ăngghen", "V.I. Lênin"], 1],
+        ["Trong phương thức sản xuất tư bản chủ nghĩa, mâu thuẫn sâu sắc giữa lực lượng sản xuất với quan hệ sản xuất bộc lộ qua cuộc khủng hoảng kinh tế lần thứ nhất vào năm...", ["1824", "1825", "1826", "1827"], 1],
+        ["Điền vào chỗ trống luận điểm của V.I. Lênin: “Điểm chủ yếu trong học thuyết của Mác là ở chỗ nó làm sáng rõ vai trò lịch sử thế giới của (...) là người xây dựng xã hội xã hội chủ nghĩa”.", ["Giai cấp vô sản", "Giai cấp tư sản", "Tầng lớp trí thức", "Tầng lớp doanh nhân"], 0],
+        ["Ba nguồn gốc lý luận trực tiếp hình thành chủ nghĩa Mác là?", ["Học thuyết GTTD, CNDVLS, sứ mệnh lịch sử GCCN", "Triết học cổ điển Đức, KTCT học Anh và CNXH không tưởng Pháp", "Thuyết tiến hóa, Định luật bảo toàn năng lượng và Thuyết tế bào", "Triết học, KTCT học và CNXHKH"], 1],
+        ["Chủ nghĩa duy vật lịch sử là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong...", ["Triết học Mác – Lênin", "Kinh tế chính trị Mác - Lênin", "Chủ nghĩa xã hội khoa học", "Chủ nghĩa xã hội hiện thực"], 0],
+        ["Nội dung nào dưới đây là tiền đề khoa học tự nhiên cho sự ra đời của chủ nghĩa xã hội khoa học?", ["Định luật chuyển động Newton", "Thuyết Hoài nghi", "Học thuyết Tế bào", "Cơ học cổ điển"], 2],
+        ["Tác phẩm nào là cương lĩnh chính trị đầu tiên của giai cấp công nhân?", ["Tuyên ngôn của Đảng Cộng sản", "Phê phán Cương lĩnh Gôta", "Hệ tư tưởng Đức", "Tư Bản"], 0],
+        ["V.I. Lênin là người sáng lập tổ chức nào?", ["Đồng minh những người cộng sản", "Quốc tế 1", "Quốc tế 2", "Quốc tế 3 (Quốc tế cộng sản)"], 3], 
+        ["Khẩu hiệu của V.I. Lênin: “Vô sản tất cả các nước, các (...) bị áp bức đoàn kết lại”.", ["Dân tộc", "Giai cấp", "Tổ chức", "Tầng lớp"], 0],
+
+        // CHƯƠNG 2
+        ["Giai cấp công nhân là tập đoàn người lao động sử dụng công cụ sản xuất có tính...", ["Thủ công", "Công nghiệp", "Thô sơ", "Tự động hoàn toàn"], 1],
+        ["C. Mác đã khẳng định: “... trong công xưởng thì người công nhân phải phục vụ máy móc” là muốn đề cập đến giai cấp nào?", ["Giai cấp công nhân hiện đại", "Giai cấp nông dân", "Giai cấp tư sản", "Tầng lớp trí thức"], 0],
+        ["Giai cấp, tầng lớp nào dưới đây chỉ có thể sống với điều kiện là kiếm được việc làm, và chỉ kiếm được việc làm, nếu lao động của họ làm tăng thêm tư bản?", ["Nông dân", "Địa chủ", "Công nhân", "Tư sản"], 2],
+        ["Nguồn gốc cơ bản của giá trị thặng dư và sự giàu có của giai cấp tư sản là?", ["Lao động sống của giai cấp công nhân", "Quá trình trao đổi, mua bán", "Hoạt động thương mại", "Kinh tế thị trường"], 0],
+        ["Chọn phương án đúng nhất: Trong chế độ tư bản chủ nghĩa, mâu thuẫn giữa giai cấp công nhân và giai cấp tư sản là mâu thuẫn đối kháng...", ["Trực tiếp", "Gián tiếp", "Trực tiếp và gián tiếp", "Cả A, B, C đều sai"], 0],
+        ["Theo chủ nghĩa Mác - Lênin, trong chế độ tư bản chủ nghĩa, giai cấp công nhân là giai cấp...", ["Không có tư liệu sản xuất", "Bị áp bức, bóc lột", "Lao động trong nền đại công nghiệp", "Cả A, B, C"], 3],
+        ["Một trong những đặc điểm chính trị - xã hội của giai cấp công nhân là giai cấp có...", ["Tinh thần cách mạng nửa vời", "Tinh thần cách mạng triệt để nhất", "Tinh thần cách mạng cải lương", "Tinh thần thỏa hiệp"], 1],
+        ["Giai cấp công nhân là giai cấp có mâu thuẫn đối kháng với...", ["Giai cấp nông dân", "Giai cấp địa chủ", "Giai cấp tư sản", "Tầng lớp trí thức"], 2],
+        ["Sứ mệnh lịch sử của giai cấp công nhân không phải là thay thế chế độ sở hữu tư nhân này bằng một chế độ sở hữu tư nhân khác mà là...", ["xoá bỏ một phần chế độ tư hữu", "xóa bỏ triệt để tư hữu về tư liệu sản xuất chủ yếu", "xoá bỏ hoàn toàn chế độ công hữu", "xoá bỏ phần lớn chế độ tư hữu"], 1],
+        ["Tổ chức chính trị cao nhất để lãnh đạo giai cấp công nhân thực hiện sứ mệnh lịch sử là...", ["Công đoàn", "Nghiệp đoàn", "Đảng cộng sản", "Mặt trận tổ quốc"], 2],
+        ["Thực hiện công nghiệp hoá, hiện đại hoá... là nhiệm vụ của giai cấp công nhân trên lĩnh vực...", ["kinh tế", "tư tưởng", "chính trị - xã hội", "văn hoá"], 0],
+        ["Xây dựng con người mới, đạo đức và lối sống mới xã hội chủ nghĩa là nhiệm vụ của giai cấp công nhân trong lĩnh vực...", ["Tâm lý, ý thức", "Đạo đức", "Văn hoá, tư tưởng", "Xã hội"], 2],
+        ["Giai cấp công nhân đại diện cho lực lượng sản xuất hiện đại, là lực lượng quyết định phá vỡ...", ["máy móc", "quan hệ sản xuất tư bản chủ nghĩa", "quan hệ giữa tư sản và các giai tầng khác", "thị trường thế giới"], 1],
+        ["Theo quan điểm của chủ nghĩa Mác - Lênin, cách mạng xã hội chủ nghĩa được hiểu theo nghĩa rộng là cuộc cách mạng...", ["Giành chính quyền nhà nước", "Cải tạo xã hội cũ", "Xây dựng chế độ xã hội chủ nghĩa và cộng sản chủ nghĩa", "Cả A, B, C"], 3],
+        ["Nội dung nào dưới đây không phải là đặc điểm chính trị - xã hội của giai cấp công nhân?", ["Tiên phong cách mạng", "Có bản chất quốc tế", "Có ý thức, kỉ luật cao", "Đại diện cho lực lượng sản xuất thủ công"], 3],
+
+        // CHƯƠNG 3
+        ["Nguyên nhân sâu xa dẫn đến sự thay thế hình thái KT-XH tư bản chủ nghĩa bằng hình thái KT-XH cộng sản chủ nghĩa là gì?", ["Mâu thuẫn giai cấp", "Mâu thuẫn giữa LLSX xã hội hóa cao với QHSX tư bản chủ nghĩa", "Mâu thuẫn giữa các phe phái", "Khủng hoảng thừa"], 1],
+        ["Trong các dự báo của C. Mác, dự báo nào thuộc giai đoạn thấp của hình thái kinh tế - xã hội cộng sản chủ nghĩa?", ["Sự đối lập giữa lao động trí óc và lao động chân tay không còn", "Không còn sự phân chia giai cấp", "Mọi người làm hết năng lực, hưởng theo nhu cầu", "Mọi người làm theo năng lực, hưởng theo lao động, còn pháp quyền tư sản"], 3],
+        ["Đặc điểm của thời kỳ quá độ lên chủ nghĩa xã hội trên lĩnh vực chính trị là gì?", ["Còn tồn tại nhiều hình thức sở hữu", "Còn tồn tại nhiều thành phần kinh tế", "Còn tồn tại giai cấp đối kháng và đấu tranh giai cấp", "Còn tồn tại tàn dư văn hóa"], 2],
+        ["Điền vào chỗ trống: “Đặc trưng của (...) không phải là xóa bỏ chế độ sở hữu nói chung, mà là xóa bỏ chế độ sở hữu tư sản”.", ["Chủ nghĩa xã hội", "Chủ nghĩa tư bản", "Chủ nghĩa cộng sản", "Thời kỳ quá độ"], 2],
+        ["Thực chất của con đường quá độ lên chủ nghĩa xã hội ở Việt Nam là gì?", ["Bỏ qua cả thành tựu của CNTB", "Bỏ qua việc xác lập vị trí thống trị của QHSX và KTTT tư bản chủ nghĩa", "Bỏ qua sản xuất hàng hóa", "Tiến thẳng lên kinh tế tri thức"], 1],
+        ["Trong Đại hội XIII, Đảng ta xác định đến năm 2045, Việt Nam sẽ là...", ["Nước đang phát triển, thu nhập trung bình thấp", "Nước đang phát triển, công nghiệp hiện đại", "Nước phát triển, thu nhập cao", "Nước công nghiệp mới"], 2],
+        ["Khi phân tích về thời kì quá độ, ai là người đầu tiên đặt vấn đề phải học tập các kinh nghiệm tổ chức, quản lí kinh tế của CNTB?", ["C. Mác", "Ph. Ăngghen", "V.I. Lênin", "Hồ Chí Minh"], 2],
+        ["Ai là người đưa ra quan điểm: “Trong một nước tiểu nông, trước hết các đồng chí phải bắc những chiếc cầu nhỏ vững chắc, đi xuyên qua chủ nghĩa tư bản nhà nước...”?", ["C. Mác", "Ph. Ăngghen", "V.I. Lênin", "Hồ Chí Minh"], 2],
+        ["Câu nói: “Người ta chỉ có thể trở thành người cộng sản khi biết làm giàu trí óc của mình bằng sự hiểu biết tất cả những kho tàng tri thức mà nhân loại đã tạo ra” là của...", ["C. Mác", "Ph. Ăngghen", "V.I. Lênin", "Hồ Chí Minh"], 2],
+        ["Nội dung kinh tế xuyên suốt của thời kì quá độ lên chủ nghĩa xã hội ở Việt Nam là...", ["Đẩy mạnh công nghiệp hoá, hiện đại hoá gắn với kinh tế tri thức", "Xác định đúng tiềm lực kinh tế", "Ứng dụng khoa học kỹ thuật", "Phát triển thị trường"], 0],
+
+        // CHƯƠNG 4
+        ["Nền dân chủ xã hội chủ nghĩa thực hiện ... rộng rãi với đông đảo quần chúng nhân dân.", ["Dân chủ", "Chuyên chính", "Thống trị", "Quản lý"], 0],
+        ["Đặc trưng cơ bản của nhà nước xã hội chủ nghĩa đó là:", ["Một kiểu nhà nước đặc biệt", "Nửa nhà nước", "Nhà nước không còn nguyên nghĩa", "Cả A, B, C"], 3],
+        ["Dân chủ xã hội chủ nghĩa ra đời gắn với sự kiện nào?", ["Giai cấp công nhân giành được chính quyền", "Giai cấp công nhân bắt đầu đấu tranh", "Xây dựng xong CNXH", "Có Đảng cộng sản"], 0],
+        ["Tổ chức nào là quan trọng nhất để thực thi quyền lực của nhân dân?", ["Nhà nước xã hội chủ nghĩa", "Đảng cộng sản", "Mặt trận Tổ quốc", "Các đoàn thể"], 0],
+        ["Công cụ hữu hiệu nhất để Nhà nước pháp quyền xã hội chủ nghĩa quản lý xã hội là gì?", ["Kế hoạch", "Đường lối", "Pháp luật", "Chủ trương"], 2],
+        ["Trong việc thực hiện quyền dân chủ trên lĩnh vực chính trị, công dân thực hiện hành vi nào?", ["Ứng cử và bầu cử", "Tham gia quản lí nhà nước", "Tham gia giám sát", "Cả A, B, C"], 3],
+        ["Nhà nước pháp quyền xã hội chủ nghĩa mang bản chất của giai cấp...", ["chủ nô", "địa chủ", "tư sản", "công nhân"], 3],
+        ["Điền từ: 'Nước ta là nước dân chủ, nghĩa là nước nhà do nhân dân làm chủ. Nhân dân có quyền lợi làm chủ, thì phải có (...) làm tròn bổn phận công dân'.", ["Khả năng", "Nghĩa vụ", "Quyết tâm", "Nguyện vọng"], 1],
+
+        // CHƯƠNG 5
+        ["Điền vào chỗ trống: (...) là hệ thống các giai cấp, tầng lớp xã hội tồn tại khách quan trong một chế độ xã hội nhất định...", ["Cơ cấu xã hội – dân cư", "Cơ cấu xã hội – nghề nghiệp", "Cơ cấu xã hội – giai cấp", "Cơ cấu xã hội – dân tộc"], 2],
+        ["Yếu tố nào có ý nghĩa quyết định tác động đến sự biến đổi của cơ cấu xã hội - giai cấp?", ["Cơ cấu kinh tế", "Cơ cấu văn hóa", "Cơ cấu chính trị", "Cơ cấu xã hội"], 0],
+        ["Trong thời kì quá độ lên chủ nghĩa xã hội, giai cấp, tầng lớp nào dưới đây giữ vai trò chủ đạo trong cơ cấu xã hội - giai cấp?", ["Công nhân", "Nông dân", "Trí thức", "Doanh nhân"], 0],
+        ["Giai cấp, tầng lớp nào dưới đây được coi là “người bạn đồng minh tự nhiên” của giai cấp công nhân?", ["Tư sản", "Nông dân", "Trí thức", "Doanh nhân"], 1],
+        ["Xét dưới góc độ kinh tế, nguyên nhân của liên minh giai cấp là...", ["Yêu cầu khách quan của quá trình CNH, HĐH", "Sự chuyển dịch cơ cấu kinh tế", "Nhu cầu lợi ích kinh tế", "Cả A, B, C"], 3],
+        ["Ở Việt Nam hiện nay, giai cấp nào là chủ thể của quá trình xây dựng nông thôn mới?", ["Giai cấp nông dân", "Giai cấp công nhân", "Đội ngũ trí thức", "Đội ngũ doanh nhân"], 0],
+        ["Vấn đề liên minh giai cấp công nhân với giai cấp nông dân và đội ngũ trí thức được Đảng ta khẳng định lần đầu tiên tại...", ["Đại hội II (1951)", "Đại hội III (1960)", "Đại hội IV (1976)", "Đại hội V (1982)"], 0],
+
+        // CHƯƠNG 6
+        ["Ở phương Tây sự hình thành dân tộc gắn liền với sự ra đời của chế độ...", ["Nguyên thủy", "Chiếm hữu nô lệ", "Tư bản chủ nghĩa", "Phong kiến"], 2],
+        ["Đặc trưng nào dưới đây là quan trọng nhất, là cơ sở gắn kết các bộ phận, các thành viên trong dân tộc?", ["Chung một vùng lãnh thổ", "Chung phương thức sinh hoạt kinh tế", "Chung ngôn ngữ", "Chung nền văn hoá"], 1],
+        ["Khi xem xét quyền tự quyết của dân tộc cần đứng vững trên lập trường của...", ["giai cấp công nhân", "giai cấp nông dân", "đội ngũ trí thức", "đội ngũ doanh nhân"], 0],
+        ["Câu nói “Vô sản tất cả các nước và các dân tộc bị áp bức, đoàn kết lại” là của...", ["C. Mác", "Ph.Ăngghen", "V.I. Lênin", "Hồ Chí Minh"], 2],
+        ["Theo Chủ tịch Hồ Chí Minh, con đường để đấu tranh cho độc lập, tự do, chủ quyền của dân tộc Việt Nam là gì?", ["Cách mạng phong kiến", "Cách mạng tư sản", "Cách mạng vô sản", "Cách mạng không ngừng"], 2],
+        ["Tôn giáo mang tính quần chúng vì...", ["Nó là nhu cầu tinh thần của một bộ phận nhân dân", "Nó là phương tiện thống trị", "Nó phản ánh sự bất lực", "Cả A, B, C"], 0],
+        ["Nguyên nhân văn hóa lý giải sự tồn tại của tôn giáo trong tiến trình xây dựng CNXH là do...", ["Tôn giáo đáp ứng nhu cầu văn hóa tinh thần", "Tôn giáo có giá trị văn hóa, đạo đức phù hợp", "Sự kế thừa các giá trị văn hóa truyền thống", "Cả A, B, C"], 3],
+        ["Theo Tổng điều tra Dân số 2019, các dân tộc thiểu số chiếm khoảng bao nhiêu phần trăm dân số Việt Nam?", ["18%", "15,5%", "14,7%", "12,3%"], 2],
+
+        // CHƯƠNG 7
+        ["Quan hệ nền tảng hình thành nên các mối quan hệ khác trong gia đình, là cơ sở pháp lý cho sự tồn tại của mỗi gia đình là...", ["Quan hệ hôn nhân", "Quan hệ huyết thống", "Quan hệ nuôi dưỡng", "Quan hệ quần tụ"], 0],
+        ["Gia đình tập thể là hình thức gia đình tồn tại trong hình thái kinh tế xã hội...", ["Cộng sản nguyên thủy", "Phong kiến", "Tư bản chủ nghĩa", "Cộng sản chủ nghĩa"], 0],
+        ["Sự thống trị của người đàn ông trong gia đình là kết quả của...", ["sự thống trị về kinh tế", "sự thống trị về văn hoá", "quy định pháp luật", "sức mạnh cơ bắp"], 0],
+        ["Chức năng nào của gia đình có nhiệm vụ thoả mãn nhu cầu tình cảm, văn hoá, tinh thần cho các thành viên?", ["Kinh tế", "Tái sản xuất con người", "Thỏa mãn nhu cầu tâm sinh lý, duy trì tình cảm", "Giáo dục"], 2],
+        ["“Gia đình đơn” còn được gọi bằng tên nào dưới đây?", ["Gia đình tập thể", "Gia đình hạt nhân", "Gia đình ba thế hệ", "Gia đình truyền thống"], 1]
+    ];
+
+    // --- CÁC HÀM XỬ LÝ (LOGIC CHẠY ĐỀ THI) ---
+    let timerInterval;
+    let timeRemaining = 50 * 60; // 50 phút tính bằng giây
+
+    // Hiển thị câu hỏi ra màn hình
+    function renderQuestions() {
+        const container = document.getElementById("quizContainer");
+        container.innerHTML = "";
+
+        questions.forEach((item, index) => {
+            let html = `
+            <div class="question-card" id="card_${index}">
+                <div class="q-header">
+                    <span>Câu ${index + 1}</span>
+                </div>
+                <div class="q-text">${item[0]}</div>
+                <div class="options-group">`;
+            
+            item[1].forEach((opt, i) => {
+                html += `
+                <label class="option-label" id="lbl_${index}_${i}">
+                    <input type="radio" name="q_${index}" value="${i}">
+                    <span>${String.fromCharCode(65 + i)}. ${opt}</span>
+                </label>`;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML += html;
+        });
+    }
+
+    // Đồng hồ đếm ngược
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeRemaining = 50 * 60;
+        const timerDisplay = document.getElementById("timer");
+        
+        timerInterval = setInterval(() => {
+            timeRemaining--;
+            let minutes = Math.floor(timeRemaining / 60);
+            let seconds = timeRemaining % 60;
+            minutes = minutes < 10 ? "0" + minutes : minutes;
+            seconds = seconds < 10 ? "0" + seconds : seconds;
+            timerDisplay.innerText = `${minutes}:${seconds}`;
+            
+            if (timeRemaining < 300) { // Đổi màu khi còn 5 phút
+                timerDisplay.style.backgroundColor = "#ffcdd2";
+                timerDisplay.style.color = "#b71c1c";
+            }
+            if (timeRemaining <= 0) {
+                clearInterval(timerInterval);
+                finishExam(true);
+            }
+        }, 1000);
+    }
+
+    // Nộp bài và Chấm điểm
+    function finishExam(autoSubmit = false) {
+        if (!autoSubmit && !confirm("Bạn có chắc chắn muốn nộp bài không?")) return;
+
+        clearInterval(timerInterval);
+        let score = 0;
+        
+        questions.forEach((item, index) => {
+            const correctIndex = item[2];
+            const selectedInput = document.querySelector(`input[name="q_${index}"]:checked`);
+            
+            // Xóa màu cũ
+            for (let i = 0; i < 4; i++) {
+                const lbl = document.getElementById(`lbl_${index}_${i}`);
+                if (lbl) lbl.classList.remove("correct", "wrong");
+            }
+
+            // Tô màu đáp án đúng
+            const correctLbl = document.getElementById(`lbl_${index}_${correctIndex}`);
+            if (correctLbl) correctLbl.classList.add("correct");
+
+            if (selectedInput) {
+                const userVal = parseInt(selectedInput.value);
+                if (userVal === correctIndex) {
+                    score++;
+                } else {
+                    const wrongLbl = document.getElementById(`lbl_${index}_${userVal}`);
+                    if (wrongLbl) wrongLbl.classList.add("wrong");
+                }
+            }
+        });
+
+        // Hiển thị kết quả
+        document.getElementById("scoreDisplay").innerText = (score * (10/60)).toFixed(1);
+        document.getElementById("correctCount").innerText = score;
+        
+        let msg = "";
+        if(score >= 50) msg = "Xuất sắc! Kiến thức rất vững.";
+        else if(score >= 40) msg = "Khá tốt! Cố gắng thêm chút nữa.";
+        else msg = "Cần ôn tập lại kỹ hơn!";
+        document.getElementById("feedbackText").innerText = msg;
+
+        document.getElementById("resultModal").style.display = "flex";
+        window.scrollTo(0, 0);
+    }
+
+    function closeModal() {
+        document.getElementById("resultModal").style.display = "none";
+    }
+
+    // Chạy ngay khi tải trang
+    window.onload = function() {
+        renderQuestions();
+        startTimer();
+    };
+
+</script>
+</body>
+</html>
