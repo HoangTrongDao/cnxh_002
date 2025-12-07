@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trắc nghiệm CNXHKH (Full Chương 1-2)</title>
+    <style>
+        :root { --primary: #007bff; --success: #28a745; --danger: #dc3545; --bg: #f4f6f9; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #eee; padding-bottom: 20px; }
+        .header h1 { margin: 0; color: var(--primary); }
+        .header p { color: #666; margin-top: 5px; }
+
+        .controls { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+        select, button { padding: 10px 15px; border-radius: 6px; border: 1px solid #ddd; font-size: 16px; cursor: pointer; }
+        button { background-color: var(--primary); color: white; border: none; transition: 0.2s; }
+        button:hover { background-color: #0056b3; }
+        
+        .quiz-area { display: none; }
+        .question-card { background: #fff; border: 1px solid #e1e4e8; border-radius: 8px; padding: 20px; margin-bottom: 20px; position: relative; }
+        .question-title { font-weight: 600; font-size: 1.1em; margin-bottom: 15px; line-height: 1.5; }
+        .badge { background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 0.8em; color: #555; margin-right: 10px; font-weight: bold; }
+        
+        .options { display: grid; gap: 10px; }
+        .option-label { display: flex; align-items: center; padding: 12px; border: 2px solid #eee; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .option-label:hover { background-color: #f8f9fa; border-color: #d1d3d6; }
+        .option-label input { margin-right: 15px; transform: scale(1.2); }
+        
+        /* Trạng thái đúng/sai */
+        .correct-answer { background-color: #d4edda !important; border-color: #c3e6cb !important; color: #155724; }
+        .wrong-answer { background-color: #f8d7da !important; border-color: #f5c6cb !important; color: #721c24; }
+        
+        .stats { position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); font-weight: bold; display: none; z-index: 100; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Ngân hàng câu hỏi CNXHKH</h1>
+        <p>Hệ thống ôn tập trắc nghiệm - Tích hợp Chương 1 & 2</p>
+    </div>
+
+    <div class="controls">
+        <select id="chapterSelect">
+            <option value="all">Tất cả các chương (175 câu)</option>
+            <option value="1">Chương 1: Nhập môn (75 câu)</option>
+            <option value="2">Chương 2: Sứ mệnh lịch sử GCCN (100 câu)</option>
+        </select>
+        <button onclick="startQuiz()">Bắt đầu làm bài</button>
+        <button onclick="checkAll()" style="background-color: #28a745;">Nộp bài</button>
+        <button onclick="resetQuiz()" style="background-color: #6c757d;">Làm lại</button>
+    </div>
+
+    <div id="quizContainer" class="quiz-area">
+        </div>
+</div>
+
+<div id="statsBox" class="stats">
+    Điểm số: <span id="scoreDisplay">0</span> / <span id="totalDisplay">0</span>
+</div>
+
+<script>
+    // Dữ liệu câu hỏi được nén để tiết kiệm dung lượng
+    // Cấu trúc: [Chương, "Câu hỏi", ["Đáp án A", "B", "C", "D"], Index_Đáp_Án_Đúng (0=A, 1=B...)]
+    const db = [
+        // --- CHƯƠNG 1 (75 Câu) ---
+        // Đáp án dựa trên bảng 
+        [1, "CNXHKH là một trong ba bộ phận cấu thành của...", ["chủ nghĩa Mác - Lênin", "triết học Mác – Lênin", "kinh tế chính trị Mác – Lênin", "chủ nghĩa xã hội không tưởng"], 0],
+        [1, "Học thuyết giá trị thặng dư là phát kiến vĩ đại của C.Mác và của Ph.Ăngghen trong?", ["triết học Mác – Lênin", "kinh tế chính trị Mác - Lênin", "chủ nghĩa xã hội khoa học", "chủ nghĩa xã hội hiện thực"], 1],
+        [1, "Trong phương thức sản xuất TBCN, mâu thuẫn về phương diện chính trị - xã hội là mâu thuẫn giữa giai cấp...", ["Vô sản với tư sản", "Chủ nô với nô lệ", "Nông dân với địa chủ", "Trí thức với công nhân"], 0],
+        [1, "Nội dung nào dưới đây là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong chủ nghĩa xã hội khoa học?", ["Chủ nghĩa duy vật lịch sử", "Học thuyết giá trị thặng dư", "Phép biện chứng duy vật", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 3],
+        [1, "Chủ nghĩa Mác - Lênin gồm ba bộ phận cấu thành là: triết học Mác - Lênin, kinh tế chính trị Mác - Lênin và", ["mĩ học Mác - Lênin", "đạo đức học Mác - Lênin", "chủ nghĩa xã hội khoa học", "chủ nghĩa xã hội không tưởng"], 2],
+        [1, "Thành phần nào dưới đây KHÔNG phải là một trong ba bộ phận cấu thành của chủ nghĩa Mác - Lênin?", ["Triết học Mác – Lênin", "Kinh tế chính trị Mác - Lênin", "Chủ nghĩa xã hội khoa học", "Chủ nghĩa xã hội hiện thực"], 3],
+        [1, "Trong PTSX tư bản chủ nghĩa, mâu thuẫn trong lĩnh vực kinh tế là mâu thuẫn giữa...", ["LLSX mang tính XH hóa với QHSX mang tính XH TBCN", "LLSX mang tính cá nhân với QHSX mang tính XH TBCN", "LLSX mang tính XH hóa với QHSX mang tính tư nhân TBCN", "LLSX mang tính cá nhân với QHSX mang tính tư nhân TBCN"], 2],
+        [1, "Chủ nghĩa xã hội khoa học là gì?", ["Là hệ thống lý luận luận giải từ góc độ chính trị - xã hội bước chuyển từ HTKT-XH TBCN sang HTKT-XH CSCN", "Là hệ thống lý luận luận giải từ góc độ chính trị - xã hội bước chuyển từ XHPK sang XHTBCN", "Là hệ thống lý luận luận giải từ góc độ kinh tế sự ra đời của HTKT-XH TBCN", "Là hệ thống lý luận luận giải từ góc độ kinh tế sự ra đời của HTKT-XH CSCN"], 0],
+        [1, "Những nhà chủ nghĩa xã hội không tưởng nào đã KHÔNG luận chứng được một cách khoa học về bản chất và quy luật phát triển của CNTB?", ["A.Xmit và Đ. Ricácđô", "H.Xanh Ximông, S. Phuriê và R. Ôoen", "C. Mác và Ph. Ăngghen", "V.I. Lênin"], 1],
+        [1, "Chỉ ra luận điểm đúng sau đây?", ["CNXHKH là một trong ba bộ phận cấu thành của chủ nghĩa Mác", "CNXHKH là một trong ba xu hướng của chủ nghĩa Mác", "CNXHKH là một trong ba tiền đề tư tưởng của chủ nghĩa Mác", "CNXHKH là một trong ba nguồn gốc hình thành chủ nghĩa Mác"], 0],
+        [1, "Trong PTSX TBCN, mâu thuẫn sâu sắc giữa LLSX với QHSX bộc lộ qua cuộc khủng hoảng kinh tế lần thứ nhất vào năm...", ["1824", "1825", "1826", "1827"], 1],
+        [1, "Thành phần nào dưới đây KHÔNG phải là một trong ba phát kiến vĩ đại của chủ nghĩa Mác - Lênin?", ["Chủ nghĩa duy vật lịch sử", "Học thuyết giá trị thặng dư", "Chủ nghĩa duy vật biện chứng", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 2],
+        [1, "Nội dung nào dưới đây là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong triết học Mác - Lênin?", ["Chủ nghĩa duy vật lịch sử", "Học thuyết giá trị thặng dư", "Chủ nghĩa duy vật biện chứng", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 0],
+        [1, "Một trong những hạn chế của chủ nghĩa xã hội không tưởng Anh và Pháp là:", ["Không thấy được tính lịch sử của giá trị", "Không phân tích được biểu hiện của giá trị trong PTSX TBCN", "Không luận chứng được một cách khoa học về bản chất của CNTB và quy luật phát triển của CNTB", "Tìm ra sứ mệnh lịch sử của giai cấp công nhân"], 2],
+        [1, "Phong trào đấu tranh của giai cấp vô sản vào những năm 30, 40 của thế kỷ XIX chứng tỏ rằng...", ["Giai cấp tư sản là một lực lượng chính trị độc lập", "Giai cấp vô sản là một lực lượng chính trị - xã hội độc lập", "Phong trào vô sản là một phong trào tự giác", "Giai cấp vô sản cần liên minh với địa chủ"], 1],
+        [1, "Ba nguồn gốc lý luận trực tiếp hình thành chủ nghĩa Mác là?", ["Học thuyết GTTD, CNDVLS, sứ mệnh lịch sử GCCN", "Triết học cổ điển Đức, KTCT học Anh và CNXH không tưởng Pháp", "Thuyết tiến hóa, Định luật bảo toàn năng lượng và Thuyết tế bào", "Triết học, KTCT học và CNXHKH"], 1],
+        [1, "Đối tượng nghiên cứu của CNXHKH là những quy luật (...) của quá trình hình thành, phát triển hình thái kinh tế - xã hội CSCN?", ["Chính trị - xã hội", "Kinh tế - xã hội", "Văn hóa - xã hội", "Tư tưởng - xã hội"], 0],
+        [1, "Nội dung nào dưới đây là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong kinh tế chính trị Mác - Lênin?", ["Chủ nghĩa duy vật lịch sử", "Học thuyết giá trị thặng dư", "Chủ nghĩa duy vật biện chứng", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 1],
+        [1, "Nội dung nào dưới đây là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong CNXHKH?", ["Chủ nghĩa duy vật lịch sử", "Học thuyết giá trị thặng dư", "Chủ nghĩa duy vật biện chứng", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 3],
+        [1, "Quy luật chính trị - xã hội phản ánh quan hệ nào sau đây?", ["Quan hệ giữa các thiết chế văn hóa", "Quan hệ giữa các giai cấp, tầng lớp trong xã hội", "Quan hệ giữa các cộng đồng dân cư trong xã hội", "Quan hệ giữa các tổ chức trong xã hội"], 1],
+        [1, "Lênin: 'Điểm chủ yếu trong học thuyết của Mác là ở chỗ nó làm sáng rõ vai trò lịch sử thế giới của (...) là người xây dựng xã hội XHCN'.", ["Giai cấp vô sản", "Giai cấp tư sản", "Tầng lớp trí thức", "Tầng lớp doanh nhân"], 0],
+        [1, "CNDV lịch sử là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong ...?", ["Triết học Mác – Lênin", "Kinh tế chính trị Mác - Lênin", "Chủ nghĩa xã hội khoa học", "Chủ nghĩa xã hội hiện thực"], 0],
+        [1, "Học thuyết giá trị thặng dư là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong ...?", ["Triết học Mác – Lênin", "Kinh tế chính trị Mác - Lênin", "Chủ nghĩa xã hội khoa học", "Chủ nghĩa xã hội hiện thực"], 1],
+        [1, "Phong trào đấu tranh nào sau đây là một trong những điều kiện ra đời của chủ nghĩa Mác?", ["Phong trào Hiến chương ở Anh", "Công xã Pari", "Cách mạng Tháng Mười Nga", "Cách mạng Tháng Tám ở Việt Nam"], 0],
+        [1, "Mảnh đất hiện thực để chủ nghĩa xã hội khoa học ra đời là gì?", ["Sự phát triển KTXH... ở châu Âu những năm 40 thế kỷ XVIII", "Sự phát triển KTXH... ở châu Âu những năm 40 thế kỷ XIX", "Sự phát triển KTXH... ở châu Âu những năm 40 thế kỷ XX", "Sự phát triển KTXH... ở châu Âu những năm cuối thế kỷ XX"], 1],
+        [1, "Tiền đề lý luận trực tiếp ra đời chủ nghĩa xã hội khoa học là gì?", ["Chủ nghĩa duy vật lịch sử và chủ nghĩa duy vật biện chứng", "Chủ nghĩa duy tâm khách quan và chủ nghĩa duy tâm chủ quan", "Chủ nghĩa duy vật siêu hình", "Chủ nghĩa xã hội không tưởng Pháp"], 3],
+        [1, "Vai trò của C. Mác và Ph. Ăngghen đối với chủ nghĩa xã hội được biểu hiện như thế nào?", ["Đưa chủ nghĩa xã hội từ không tưởng trở thành khoa học", "Đưa chủ nghĩa xã hội từ lý luận thành hiện thực", "Đưa chủ nghĩa xã hội hiện thực từ một nước trở thành hệ thống", "Đưa chủ nghĩa xã hội từ Đức sang Anh"], 0],
+        [1, "Hạn chế lớn nhất của CNXH không tưởng Anh và Pháp cuối TK XVIII đầu TK XIX là không phát hiện ra sứ mệnh lịch sử của giai cấp...", ["Nông dân", "Công nhân", "Tư sản", "Địa chủ"], 1],
+        [1, "Học thuyết sứ mệnh lịch sử của GCCN là phát kiến vĩ đại của C. Mác và Ph. Ăngghen trong...?", ["Triết học Mác – Lênin", "Kinh tế chính trị Mác - Lênin", "Chủ nghĩa xã hội khoa học", "Chủ nghĩa xã hội hiện thực"], 2],
+        [1, "Vai trò của V.I. Lênin đối với chủ nghĩa xã hội biểu hiện như thế nào?", ["Đưa chủ nghĩa xã hội từ lý luận thành hiện thực", "Đưa chủ nghĩa xã hội từ một nước trở thành hệ thống", "Đưa chủ nghĩa xã hội từ không tưởng thành khoa học", "Đưa chủ nghĩa xã hội từ phương Tây sang phương Đông"], 0],
+        [1, "Phạm trù trung tâm và xuất phát của chủ nghĩa xã hội khoa học là gì?", ["Phạm trù sứ mệnh lịch sử của giai cấp công nhân", "Phạm trù sứ mệnh lịch sử của giai cấp nông dân", "Phạm trù sứ mệnh lịch sử của giai cấp tư sản", "Phạm trù sứ mệnh lịch sử của giai cấp chủ nô"], 0],
+        [1, "Vai trò của C. Mác gắn liền với tổ chức nào?", ["Tổ chức Quốc tế 1", "Tổ chức Quốc tế 2", "Tổ chức Quốc tế 3", "Tổ chức Quốc tế 4"], 0],
+        [1, "Nội dung nào dưới đây KHÔNG phải là điều kiện kinh tế - xã hội cho sự ra đời của CNXHKH?", ["Cách mạng công nghiệp tạo ra sự phát triển mạnh mẽ cho nền đại công nghiệp", "Mâu thuẫn giữa LLSX mang tính XHH với QHSX tư nhân TBCN", "Mâu thuẫn giữa GCCN và GCTS", "Triết học cổ điển Đức"], 3],
+        [1, "Phong trào đấu tranh nào dưới đây KHÔNG phải là điều kiện kinh tế - xã hội cho sự ra đời của CNXHKH?", ["Phong trào công nhân dệt ở thành phố Lion", "Phong trào công nhân ở Nga", "Phong trào Hiến chương của người lao động ở Anh", "Phong trào công nhân dệt ở thành phố Lyon"], 1],
+        [1, "Tác phẩm nào đánh dấu sự ra đời của chủ nghĩa xã hội khoa học?", ["Hệ tư tưởng Đức", "Tuyên ngôn của Đảng Cộng sản", "Phê phán Cương lĩnh Gôta", "Tình cảnh giai cấp lao động Anh"], 1],
+        [1, "Nội dung nào dưới đây là tiền đề khoa học tự nhiên cho sự ra đời của chủ nghĩa xã hội khoa học?", ["Định luật chuyển động Newton", "Thuyết Hoài nghi", "Thuyết trường Lượng tử", "Học thuyết Tế bào"], 3],
+        [1, "Tác phẩm nào là cương lĩnh chính trị đầu tiên của giai cấp công nhân?", ["Tuyên ngôn của Đảng Cộng sản", "Phê phán Cương lĩnh Gôta", "Hệ tư tưởng Đức", "Tư Bản"], 0],
+        [1, "Lênin: “Học thuyết của Mác là học thuyết (...) vì nó là một học thuyết chính xác”.", ["Vạn năng", "Khoa học", "Cách mạng", "Tiến bộ"], 0],
+        [1, "Nội dung nào dưới đây là tiền đề khoa học tự nhiên cho sự ra đời của CNXHKH?", ["Định luật chuyển động Newton", "Định luật quán tính", "Định luật bảo toàn và chuyển hoá năng lượng", "Định luật hấp dẫn"], 2],
+        [1, "Chủ nghĩa Mác - Lênin được cấu thành từ ba bộ phận lý luận cơ bản là:", ["CNXH không tưởng, Triết học Mác - Lênin, KTCT Mác - Lênin", "Triết học Mác - Lênin, KTCT Mác - Lênin, CNXH khoa học", "Kinh tế chính trị học, CNXH không tưởng, Triết học Mác – Lênin", "Triết học cổ điển Đức, KTCT cổ điển Anh, CNXH không tưởng Pháp"], 1],
+        [1, "Một trong những đóng góp của V.I. Lênin đối với chủ nghĩa xã hội khoa học là...", ["Xây dựng lý luận về đảng kiểu mới của giai cấp công nhân", "Xây dựng lý luận về đảng kiểu mới của giai cấp nông dân", "Xây dựng lý luận về đảng của nhiều giai cấp, tầng lớp", "Xây dựng lý luận về đảng của các dân tộc thuộc địa"], 0],
+        [1, "Nội dung nào dưới đây là tiền đề khoa học tự nhiên cho sự ra đời của CNXHKH?", ["Học thuyết tiến hoá của Darwin", "Triết học cổ điển Đức", "Kinh tế chính trị cổ điển Anh", "Chủ nghĩa xã hội không tưởng Pháp"], 0],
+        [1, "Một trong những đóng góp của V.I. Lênin đối với chủ nghĩa xã hội khoa học là gì?", ["Xây dựng lý luận về cách mạng dân chủ kiểu mới", "Xây dựng lý luận về cách mạng dân tộc kiểu mới", "Xây dựng lý luận về cách mạng phong kiến kiểu mới", "Xây dựng lý luận về cách mạng công nghệ"], 0],
+        [1, "Giai đoạn hình thành và phát triển chủ nghĩa Mác do ai thực hiện?", ["C. Mác", "C. Mác và Ph. Ăngghen", "V.I. Lênin", "C. Mác, Ph. Ăngghen và V.I. Lênin"], 1],
+        [1, "Giai đoạn bảo vệ và phát triển chủ nghĩa Mác thành chủ nghĩa Mác - Lênin do ai thực hiện?", ["C. Mác", "C. Mác và Ph. Ăngghen", "V.I. Lênin", "C. Mác, Ph. Ăngghen và V.I. Lênin"], 2],
+        [1, "Nội dung nào dưới đây KHÔNG phải là tiền đề khoa học tự nhiên cho sự ra đời của CNXHKH?", ["Định luật bảo toàn và chuyến hoá năng lượng", "Thuyết tương đối", "Học thuyết tiến hoá", "Học thuyết tế bào"], 1],
+        [1, "V.I. Lênin là người sáng lập tổ chức nào?", ["Đồng minh những người cộng sản", "Quốc tế 1", "Quốc tế 2", "Quốc tế 3 (Quốc tế cộng sản)"], 3], // Đã sửa theo logic lịch sử, nhưng theo bảng đáp án là A (lỗi đề). Sửa theo bảng đáp án: A
+        [1, "V.I. Lênin là người sáng lập tổ chức nào? (Theo đáp án gốc của đề)", ["Quốc tế 3 (Quốc tế cộng sản)", "Quốc tế 1", "Quốc tế 2", "Đồng minh những người cộng sản"], 0],
+        [1, "Khẩu hiệu của V.I. Lênin: “Vô sản tất cả các nước, các (...) bị áp bức đoàn kết lại”.", ["Dân tộc", "Giai cấp", "Tổ chức", "Tầng lớp"], 0],
+        [1, "Nội dung nào dưới đây là một tiền đề tư tưởng lí luận cho sự ra đời của CNXHKH?", ["Triết học hiện sinh", "Học thuyết tiến hoá của Darwin", "Phật giáo", "Kinh tế chính trị cổ điển Anh"], 3],
+        [1, "Cuộc cách mạng công nghiệp lần thứ nhất trong phương thức sản xuất TBCN diễn ra đầu tiên ở đâu?", ["Anh", "Pháp", "Đức", "Nga"], 0],
+        [1, "Nội dung nào dưới đây là một tiền đề tư tưởng lí luận cho sự ra đời của CNXHKH?", ["Triết học Hy lạp", "Học thuyết tiến hoá của Darwin", "Chủ nghĩa xã hội không tưởng Pháp", "Chủ nghĩa duy vật chất phác"], 2],
+        [1, "Đối tượng nghiên cứu của chủ nghĩa xã hội khoa học là...", ["Những quy luật kinh tế của sự ra đời PTSX CSCN", "Những quy luật tự nhiên của quá trình cách mạng XHCN", "Những quy luật vận động, phát triển chung nhất của tự nhiên, xã hội và tư duy", "Cả A, B, C đều sai"], 3],
+        [1, "Tác phẩm nào thể hiện rõ sự chuyển biến tư tưởng của Ph. Ăngghen từ thế giới quan duy tâm sang duy vật?", ["Bộ Tư bản", "Góp phần phê phán Triết học pháp quyền của Hêghen", "Bản thảo kinh tế triết học năm 1844", "Lược khảo khoa kinh tế - chính trị"], 3],
+        [1, "Một trong những đóng góp quan trọng của ĐCS Việt Nam vào lý luận của CNXHKH là...", ["Tư tưởng độc lập dân tộc gắn liền với chủ nghĩa xã hội", "Tư tưởng dân chủ", "Tư tưởng nhân văn", "Tư tưởng đoàn kết"], 0],
+        [1, "Cách mạng Tháng Mười Nga năm 1917 mở ra thời kỳ quá độ từ [...] trên phạm vi quốc tế.", ["Chủ nghĩa tư bản lên chủ nghĩa xã hội", "Phong kiến lên chủ nghĩa tư bản", "Thực dân, phong kiến lên chủ nghĩa xã hội", "Chủ nghĩa xã hội lên chủ nghĩa cộng sản"], 0],
+        [1, "Nội dung nào dưới đây là một tiền đề tư tưởng lí luận cho sự ra đời của CNXHKH?", ["Triết học cổ điển Đức", "Triết học Tây Âu trung cổ", "Triết học hiện sinh", "Triết học phương Tây hiện đại"], 0],
+        [1, "Nội dung nào dưới đây KHÔNG phải là tiền đề tư tưởng lí luận cho sự ra đời của CNXHKH?", ["Chủ nghĩa xã hội không tưởng Pháp", "Triết học cổ điển Đức", "Thuyết tương đối", "Kinh tế chính trị cổ điển Anh"], 2],
+        [1, "Phong trào đấu tranh nào sau đây là một trong những điều kiện ra đời của chủ nghĩa Mác?", ["Cách mạng tư sản Anh", "Công xã Pari", "Cách mạng Tháng Mười Nga", "Cuộc khởi nghĩa của công nhân dệt Lion (Pháp)"], 3],
+        [1, "Nội dung nào dưới đây KHÔNG phải là tiền đề tư tưởng lí luận cho sự ra đời của CNXHKH?", ["Định luật chuyển động Newton", "Triết học cổ điển Đức", "Chủ nghĩa xã hội không tưởng Pháp", "Kinh tế chính trị cổ điển Anh"], 0],
+        [1, "Tiền đề quan trọng cho bước chuyển biến tư tưởng của C. Mác và Ph. Ăngghen từ duy tâm sang duy vật là...", ["Phép biện chứng của G. W.Ph. Hêghen", "Chủ nghĩa duy vật vô thần của L. Phoiơbắc", "Tư tưởng kinh tế của A. Xmít", "Tư tưởng xã hội chủ nghĩa của H. Xanh Ximông"], 1],
+        [1, "Tác phẩm nào thể hiện rõ sự chuyển biến tư tưởng của C. Mác từ duy tâm sang duy vật, từ DC CM sang CSCN?", ["Tình cảnh nước Anh", "Góp phần phê phán triết học pháp quyền của Hêghen Lời nói đầu", "Lược khảo khoa kinh tế - chính trị", "Bộ Tư bản"], 1],
+        [1, "Tác phẩm nào thể hiện rõ sự chuyển biến tư tưởng của Ph. Ăngghen từ duy tâm sang duy vật?", ["Tình cảnh nước Anh", "Góp phần phê phán Triết học pháp quyền của Hêghen", "Bản thảo kinh tế triết học năm 1844", "Bộ Tư bản"], 0],
+        [1, "Từ 1843-1848, C. Mác và Ph. Ăngghen chuyển biến tư tưởng...", ["từ thế giới quan duy vật sang duy tâm...", "từ thế giới quan duy vật sang duy tâm...", "từ thế giới quan duy tâm sang duy vật, từ lập trường dân chủ cách mạng sang lập trường CSCN", "từ thế giới quan duy tâm sang duy vật..."], 2],
+        [1, "Học thuyết nào là cơ sở về mặt triết học khẳng định sự sụp đổ của CNTB và thắng lợi của CNXH?", ["Học thuyết duy vật biện chứng", "Học thuyết duy vật lịch sử", "Học thuyết giá trị thặng dư", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 1],
+        [1, "Học thuyết nào chỉ rõ bản chất của chế độ làm thuê và hàng hoá sức lao động?", ["Học thuyết duy vật biện chứng", "Học thuyết duy vật lịch sử", "Học thuyết giá trị thặng dư", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 2],
+        [1, "Học thuyết nào khắc phục triệt để hạn chế của CNXH không tưởng, luận chứng sự ra đời tất yếu của CNXH?", ["Học thuyết duy vật biện chứng", "Học thuyết duy vật lịch sử", "Học thuyết giá trị thặng dư", "Học thuyết về sứ mệnh lịch sử thế giới của GCCN"], 3],
+        [1, "Tác phẩm nào đánh dấu sự ra đời của chủ nghĩa Mác với tư cách là CNXHKH theo nghĩa rộng?", ["Tình cảnh giai cấp lao động ở Anh", "Những nguyên lí của chủ nghĩa cộng sản", "Tuyên ngôn của Đảng Cộng sản", "Điều lệ của Đồng minh những người cộng sản"], 2],
+        [1, "Tác phẩm Tuyên ngôn của Đảng Cộng sản ra đời vào...", ["tháng 2 năm 1842", "tháng 2 năm 1848", "tháng 8 năm 1842", "tháng 8 năm 1848"], 1],
+        [1, "Tiền đề quan trọng cho bước chuyển biến tư tưởng của C. Mác và Ph. Ăngghen từ duy tâm sang duy vật là...", ["Phép biện chứng của G. W.Ph. Hêghen", "Chủ nghĩa duy vật vô thần của L. Phoiơbắc", "Tư tưởng kinh tế của A. Xmít", "Tư tưởng xã hội chủ nghĩa của H. Xanh Ximông"], 1],
+        [1, "Tác phẩm nào là cương lĩnh chính trị, là kim chỉ nam hành động của phong trào cộng sản?", ["Tình cảnh giai cấp lao động ở Anh", "Những nguyên lí của chủ nghĩa cộng sản", "Tuyên ngôn của Đảng Cộng sản", "Điều lệ của Đồng minh những người cộng sản"], 2],
+        [1, "Tác phẩm nào KHÔNG được C. Mác và Ph. Ăngghen viết trong giai đoạn từ 1848 đến 1871?", ["Ngày mười tám tháng Sương mù của Lui Bônapacto", "Chiến tranh nông dân ở Đức", "Cách mạng và phản cách mạng ở Đức", "Chống Đuyrinh"], 3],
+        [1, "Tác phẩm nào KHÔNG được C. Mác và Ph. Ăngghen viết trong giai đoạn từ Công xã Pari đến 1895?", ["Ngày mười tám tháng Sương mù của Lui Bônapacto", "Nội chiến ở Pháp", "Nguồn gốc của gia đình, của chế độ tư hữu và của nhà nước", "Sự phát triển của chủ nghĩa xã hội từ không tưởng đến khoa học"], 0],
+        [1, "Tác phẩm nào không được V.I. Lênin viết trong giai đoạn trước Cách mạng tháng Mười Nga?", ["Làm gì?", "Một bước tiến, hai bước lùi", "Bàn về nhà nước", "Nhà nước và cách mạng"], 2],
+        [1, "Tác phẩm nào KHÔNG được V.I. Lênin viết trong giai đoạn sau Cách mạng tháng Mười Nga?", ["Cách mạng vô sản và tên phản bội Causky", "Những người bạn dân là thế nào và họ đấu tranh chống những người dân chủ ra sao?", "Những nhiệm vụ trước mắt của chính quyền Xô viết", "Bàn về nhà nước"], 1],
+        [1, "Tác phẩm nào phân tích hệ thống lịch sử và logic hoàn chỉnh về những vấn đề cơ bản của CNXH?", ["Tình cảnh giai cấp lao động ở Anh", "Những nguyên lí của chủ nghĩa cộng sản", "Tuyên ngôn của Đảng Cộng sản", "Điều lệ của Đồng minh những người cộng sản"], 2],
+
+        // --- CHƯƠNG 2 (100 Câu) ---
+        // Đáp án dựa trên bảng 
+        [2, "Nội dung nào dưới đây là phạm trù trung tâm, là nguyên lí xuất phát của CNXHKH?", ["Sứ mệnh lịch sử thế giới của giai cấp công nhân", "CNXH và thời kì quá độ lên CNXH", "Dân chủ XHCN và nhà nước XHCN", "Vấn đề dân tộc trong thời kì quá độ lên CNXH"], 0],
+        [2, "Giai cấp nào dưới đây là con đẻ của nền đại công nghiệp tư bản chủ nghĩa?", ["Giai cấp tư sản", "Giai cấp địa chủ", "Giai cấp công nhân", "Giai cấp nông dân"], 2],
+        [2, "Sự ra đời và phát triển của giai cấp công nhân hiện đại gắn liền với sự ra đời và phát triển của [...].", ["Sản xuất thủ công", "Công trường thủ công", "Nền đại công nghiệp tư bản chủ nghĩa", "Cả A, B, C đều sai"], 2],
+        [2, "Nội dung sứ mệnh lịch sử của giai cấp công nhân là [...].", ["Xóa bỏ chế độ nô lệ...", "Xóa bỏ chế độ phong kiến...", "Xóa bỏ chế độ TBCN, xây dựng CNXH, CNCS", "Cả A, B, C đều sai"], 2],
+        [2, "Trong chủ nghĩa tư bản, giai cấp công nhân đại biểu cho phương thức sản xuất [...].", ["Tiên tiến", "Lạc hậu", "Manh mún", "Cả A, B, C"], 0],
+        [2, "Trong chủ nghĩa tư bản, giai cấp công nhân có mấy đặc trưng cơ bản?", ["2", "3", "4", "5"], 0],
+        [2, "Lao động trực tiếp hoặc gián tiếp vận hành các công cụ SX công nghiệp hiện đại thể hiện [...].", ["công cụ lao động của người công nhân", "phương thức lao động của người công nhân", "vị trí trong QHSX TBCN", "địa vị xã hội"], 1],
+        [2, "Về vị trí trong quan hệ sản xuất TBCN, công nhân là những người lao động [...].", ["có sở hữu TLSX là sức lao động", "có sở hữu TLSX là kinh nghiệm", "không sở hữu TLSX chủ yếu của xã hội", "không sở hữu bất cứ TLSX nào"], 2],
+        [2, "“Các giai cấp khác đều suy tàn và tiêu vong... còn giai cấp vô sản là sản phẩm của bản thân nền đại công nghiệp” là luận điểm của [...].", ["C. Mác và Ph.Ăngghen", "C. Mác", "Ph. Ăngghen", "V.I. Lênin"], 0],
+        [2, "Giai cấp nào không sở hữu TLSX chủ yếu, phải bán sức lao động và bị bóc lột GTTD?", ["Trí thức", "Doanh nhân", "Tiểu tư sản", "Công nhân"], 3],
+        [2, "Thuật ngữ có nghĩa tương đồng với khái niệm giai cấp công nhân là [...].", ["Giai cấp vô sản", "Giai cấp công nhân hiện đại", "Giai cấp công nhân đại công nghiệp", "Cả A, B, C"], 3],
+        [2, "Giai cấp công nhân là tập đoàn người lao động sử dụng công cụ sản xuất có tính [...].", ["Thủ công", "Công nghiệp", "Thô sơ", "Cả A, B, C"], 1],
+        [2, "C. Mác khẳng định: “... trong công xưởng thì người công nhân phải phục vụ máy móc” là nói đến giai cấp nào?", ["Giai cấp công nhân hiện đại", "Giai cấp nông dân", "Giai cấp tư sản", "Tầng lớp trí thức"], 0],
+        [2, "Trong chủ nghĩa tư bản, giai cấp công nhân hiện đại có nguồn gốc từ [...].", ["Giai cấp nông dân", "Thợ thủ công", "Tiểu chủ", "Cả A, B, C"], 3],
+        [2, "Trong chế độ TBCN, đặc trưng cơ bản 'không có TLSX, phải bán SLĐ và bị bóc lột' là của giai cấp nào?", ["Giai cấp tư sản", "Giai cấp công nhân", "Giai cấp nông dân", "Tầng lớp trí thức"], 1],
+        [2, "Đặc trưng 'không có TLSX...' dùng để phân biệt giai cấp công nhân với [...].", ["Tầng lớp trí thức", "Giai cấp nông dân", "Giai cấp tư sản", "Cả A, B, C"], 2],
+        [2, "Giai cấp nào chỉ có thể sống với điều kiện là kiếm được việc làm, và chỉ kiếm được việc làm nếu lao động của họ làm tăng thêm tư bản?", ["Nông dân", "Địa chủ", "Công nhân", "Tư sản"], 2],
+        [2, "Lực lượng nào buộc phải tự bán mình để kiếm ăn từng bữa, là một hàng hoá...?", ["Nông dân", "Người làm nghề tự do", "Công nhân", "Tiểu tư sản"], 2],
+        [2, "Nguồn gốc cơ bản của giá trị thặng dư và sự giàu có của giai cấp tư sản là?", ["Lao động sống của giai cấp công nhân", "Quá trình trao đổi, mua bán", "Hoạt động thương mại", "Kinh tế thị trường"], 0],
+        [2, "Giai cấp công nhân lao động bằng phương thức công nghiệp với đặc trưng công cụ lao động là [...].", ["ruộng đất", "con trâu, cái cày", "trí óc", "máy móc có tính chất công nghiệp"], 3],
+        [2, "Giai cấp nào là sản phẩm của bản thân nền đại công nghiệp, là chủ thể của quá trình sản xuất vật chất hiện đại?", ["Giai cấp chủ nô", "Giai cấp địa chủ", "Giai cấp công nhân", "Giai cấp tư sản"], 2],
+        [2, "Lực lượng nào là đại biểu cho LLSX tiên tiến, quyết định sự tồn tại và phát triển của xã hội hiện đại?", ["Giai cấp nông dân", "Đội ngũ trí thức", "Giai cấp công nhân", "Giai cấp tư sản"], 2],
+        [2, "Trong chế độ TBCN, mâu thuẫn giữa giai cấp công nhân và giai cấp tư sản là mâu thuẫn đối kháng [...].", ["Trực tiếp", "Gián tiếp", "Trực tiếp và gián tiếp", "Cả A, B, C đều sai"], 0],
+        [2, "Theo chủ nghĩa Mác - Lênin, trong chế độ TBCN, giai cấp công nhân là giai cấp [...].", ["Không có tư liệu sản xuất", "Bị áp bức, bóc lột", "Lao động trong nền đại công nghiệp", "Cả A, B, C"], 3],
+        [2, "Trong chủ nghĩa tư bản hiện nay, giai cấp công nhân là giai cấp [...].", ["Không bị bóc lột GTTD", "Bị bóc lột GTTD", "Bị bóc lột một phần GTTD", "Cả A, B, C đều sai"], 1],
+        [2, "Trong chế độ TBCN, một trong những đặc điểm chính trị - xã hội của giai cấp công nhân là [...].", ["Giai cấp có tư liệu sản xuất", "Bộ phận quan trọng nhất của LLSX", "Giai cấp tiên phong cách mạng", "Cả A, B, C"], 2],
+        [2, "Ai khẳng định: “Lực lượng sản xuất hàng đầu của toàn nhân loại là công nhân, là người lao động?", ["C. Mác", "Ph. Ănghen", "Hồ Chí Minh", "V. I. Lênin"], 3],
+        [2, "Cùng với sự phát triển của khoa học và công nghệ, giai cấp công nhân [...].", ["Giảm về số lượng và nâng cao về chất lượng", "Tăng về số lượng và nâng cao về chất lượng", "Giảm về số lượng và giảm về chất lượng", "Cả A, B, C đều sai"], 1],
+        [2, "Nền đại công nghiệp rèn luyện cho GCCN tính tổ chức, kỉ luật và [...].", ["tâm lí lao động công nghiệp", "tác phong nông nghiệp", "tâm lí lao động nông nghiệp", "tâm lí lao động tự do"], 0],
+        [2, "Mâu thuẫn giữa LLSX xã hội hoá cao với QHSX chiếm hữu tư nhân TBCN là mâu thuẫn cơ bản của PTSX nào?", ["Chiếm hữu nô lệ", "Phong kiến", "Tư bản chủ nghĩa", "Cộng sản chủ nghĩa"], 2],
+        [2, "Biểu hiện về mặt xã hội của mâu thuẫn cơ bản trong PTSX TBCN là mâu thuẫn giữa [...].", ["tư bản và lao động", "giai cấp công nhân và giai cấp tư sản", "LLSX và QHSX", "các tập đoàn tư bản"], 1],
+        [2, "Trong quan hệ sản xuất TBCN, giai cấp công nhân là giai cấp [...].", ["Không có tư liệu sản xuất", "Phải bán sức lao động", "Bị bóc lột giá trị thặng dư", "Cả A, B, C"], 3],
+        [2, "Trong chế độ TBCN, giai cấp công nhân là giai cấp bị giai cấp tư sản bóc lột [...].", ["Trực tiếp", "Gián tiếp", "Trực tiếp và gián tiếp", "Cả A, B, C đều sai"], 0],
+        [2, "Trong quan hệ sản xuất TBCN, giai cấp công nhân là giai cấp [...].", ["Bán SLĐ cho chủ nô", "Bán SLĐ cho địa chủ", "Bán SLĐ cho tư sản và bị bóc lột", "Cả A, B, C đều sai"], 2],
+        [2, "Trong chế độ TBCN, giai cấp công nhân là những người sản xuất ra [...].", ["Một phần của cải", "Đại đa số của cải", "Toàn bộ của cải", "Cả A, B, C"], 1],
+        [2, "Một trong những đặc điểm chính trị - xã hội của giai cấp công nhân là giai cấp có [...].", ["Tinh thần cách mạng nửa vời", "Tinh thần cách mạng triệt để nhất", "Tinh thần cách mạng cải lương", "Cả A, B, C đều sai"], 1],
+        [2, "Một trong những đặc điểm chính trị - xã hội của giai cấp công nhân là giai cấp có [...].", ["Ý thức tổ chức kỷ luật kém", "Ý thức tổ chức kỷ luật trung bình", "Ý thức tổ chức kỷ luật cao", "Cả A, B, C đều sai"], 2],
+        [2, "Mâu thuẫn giữa giai cấp công nhân và giai cấp tư sản là mâu thuẫn [...].", ["không đối kháng về lợi ích", "về lợi ích không cơ bản", "đối kháng gián tiếp về lợi ích", "đối kháng trực tiếp về lợi ích"], 3],
+        [2, "Giữa giai cấp công nhân và giai cấp nông dân có [...].", ["toàn bộ lợi ích thống nhất", "nhiều lợi ích cơ bản thống nhất", "lợi ích hoàn toàn khác nhau", "lợi ích hoàn toàn đối lập"], 1],
+        [2, "Trong chế độ TBCN, giai cấp công nhân bị giai cấp tư sản bóc lột [...].", ["Giá trị thặng dư", "Giá trị sử dụng", "Giá trị trao đổi", "Cả A, B, C"], 0],
+        [2, "Giai cấp công nhân là giai cấp có mâu thuẫn đối kháng với [...].", ["Giai cấp nông dân", "Giai cấp địa chủ", "Giai cấp tư sản", "Tầng lớp trí thức"], 2],
+        [2, "Một trong những nội dung sứ mệnh lịch sử của giai cấp công nhân là [...].", ["Xóa bỏ chế độ tư bản chủ nghĩa", "Xóa bỏ chế độ phong kiến", "Xóa bỏ chế độ chiếm hữu nô lệ", "Cả A, B, C"], 0],
+        [2, "Một trong những nội dung sứ mệnh lịch sử của giai cấp công nhân là [...].", ["Xây dựng chế độ chiếm hữu nô lệ", "Xây dựng chế độ phong kiến", "Xây dựng chế độ tư bản chủ nghĩa", "Xây dựng xã hội XHCN và CSCN"], 3],
+        [2, "Trong chế độ TBCN, có mấy điều kiện khách quan quy định sứ mệnh lịch sử của GCCN?", ["2", "3", "4", "5"], 0],
+        [2, "Quan điểm nào dưới đây không đúng về giai cấp công nhân?", ["Là tập đoàn xã hội ổn định...", "Giai cấp công nhân không đại diện cho QHSX tiên tiến", "Là lực lượng chủ yếu của tiến trình quá độ lên CNXH", "Là chủ thể của quá trình SXVC hiện đại"], 1],
+        [2, "Phát biểu nào dưới đây không đúng về giai cấp công nhân?", ["Là người làm thuê, bị bóc lột GTTD", "Là người làm thuê, không bị bóc lột GTTD", "Lợi ích cơ bản đối lập với giai cấp tư sản", "Có sứ mệnh phủ định CNTB, xây dựng CNXH"], 1],
+        [2, "Điều kiện khách quan quy định sứ mệnh lịch sử của GCCN trong chế độ TBCN là [...].", ["Tư tưởng", "Chính trị", "Địa vị kinh tế - xã hội", "Văn hóa"], 2],
+        [2, "Một trong những điều kiện khách quan quy định sứ mệnh lịch sử của GCCN trong chế độ TBCN là [...].", ["Kinh tế", "Tư tưởng", "Đặc điểm chính trị - xã hội", "Cả A, B, C đều sai"], 2],
+        [2, "Điều kiện khách quan quy định sứ mệnh lịch sử của GCCN trong chế độ TBCN là [...].", ["Con đẻ của nền đại công nghiệp", "Địa vị KTXH và đặc điểm chính trị - xã hội", "Sự phát triển của LLSX", "Cả A, B, C"], 1],
+        [2, "Trong chế độ TBCN, GCCN là giai cấp tiên phong cách mạng vì họ là giai cấp [...].", ["Đại biểu cho PTSX tiên tiến", "Được trang bị lý luận khoa học", "Luôn đi đầu trong mọi phong trào", "Cả A, B, C"], 3],
+        [2, "Phát biểu nào không phải là đặc điểm của GCCN mang sứ mệnh lịch sử thế giới?", ["Đại diện cho LLSX tiến bộ", "Lực lượng đông đảo và tiên phong", "Lực lượng tiến bộ nhưng chỉ bảo vệ lợi ích cho mình", "Đại diện cho khuynh hướng tiến bộ"], 2],
+        [2, "Nội dung nào không phải là sứ mệnh lịch sử thế giới của GCCN?", ["Giải phóng cho GCCN và nhân loại", "Xoá bỏ CNTB", "Xây dựng xã hội CSCN", "Xoá bỏ chế độ người bóc lột người, giải phóng cho GCTS"], 3],
+        [2, "Mục tiêu nào dưới đây là mục tiêu lớn nhất mà giai cấp công nhân thực hiện?", ["Xoá bỏ tận gốc chế độ người bóc lột người", "Xoá bỏ tận gốc chế độ TBCN", "Xoá bỏ tận gốc chế độ phong kiến", "Xoá bỏ tận gốc chế độ nô lệ làm thuê"], 0],
+        [2, "Quan điểm nào đúng về việc xoá bỏ HTKT-XH tư bản chủ nghĩa?", ["Xoá bỏ cả QHSX bóc lột và LLSX", "Xoá bỏ QHSX bóc lột và kế thừa thành tựu LLSX", "Xoá bỏ LLSX và kế thừa QHSX", "Xoá bỏ văn hoá và tư tưởng bóc lột"], 1],
+        [2, "Trong chế độ TBCN, GCCN có tinh thần cách mạng triệt để nhất vì họ [...].", ["Xóa bỏ tận gốc chế độ tư hữu về TLSX", "Xóa bỏ chế độ công hữu về TLSX", "Xóa bỏ mọi hình thức sở hữu", "Cả A, B, C"], 0],
+        [2, "Trong chế độ TBCN, giai cấp công nhân có thể đoàn kết nội bộ giai cấp vì họ có chung [...].", ["Địa vị kinh tế - xã hội", "Điều kiện làm việc", "Điều kiện sống", "Cả A, B, C"], 3],
+        [2, "Trong chế độ TBCN, giai cấp công nhân đoàn kết với giai cấp khác vì họ [...].", ["Có chung lợi ích kinh tế", "Đều bị giai cấp tư sản bóc lột", "Có chung nguyện vọng được giải phóng", "Cả A, B, C"], 3],
+        [2, "Trong chế độ TBCN, giai cấp công nhân có bao nhiêu đặc điểm chính trị - xã hội?", ["4", "5", "6", "7"], 0],
+        [2, "Trong CNTB, mục tiêu của công nhân là xoá bỏ QHSX dựa trên chế độ [...].", ["công hữu về TLSX", "sở hữu chung về TLSX", "sở hữu công cộng về TLSX", "sở hữu tư nhân TBCN về TLSX"], 3],
+        [2, "Muốn thực hiện sứ mệnh lịch sử, giai cấp công nhân phải [...].", ["lật đổ GCTS, giành chính quyền, thiết lập chuyên chính vô sản...", "lật đổ giai cấp vô sản...", "lật đổ tiểu tư sản...", "lật đổ đại tư sản..."], 0],
+        [2, "Để thực hiện sứ mệnh lịch sử, bước đầu tiên GCCN phải làm là [...].", ["giành chính quyền, thiết lập nhà nước của mình", "xoá bỏ sự bóc lột", "xây dựng thành công CNXH", "liên minh với nông dân"], 0],
+        [2, "Xoá bỏ QHSX tư nhân TBCN, xây dựng QHSX mới là nhiệm vụ của GCCN trên lĩnh vực [...].", ["kinh tế", "văn hoá", "chính trị - xã hội", "tư tưởng"], 0],
+        [2, "Chủ thể chiếm hữu tư liệu sản xuất chủ yếu trong chế độ tư bản chủ nghĩa là [...].", ["Giai cấp công nhân", "Giai cấp tư sản", "Giai cấp địa chủ", "Giai cấp nông dân"], 1],
+        [2, "Đại biểu cho lực lượng sản xuất tiên tiến trong chế độ tư bản chủ nghĩa là [...].", ["Giai cấp nông dân", "Giai cấp tư sản", "Giai cấp công nhân", "Tầng lớp trí thức"], 2],
+        [2, "Đại biểu cho QHSX chiếm hữu tư nhân TBCN trong chế độ TBCN là [...].", ["Giai cấp công nhân", "Giai cấp nông dân", "Giai cấp tư sản", "Cả A, B, C"], 2],
+        [2, "Quy luật ra đời của ĐCS ở các nước TBCN phát triển là sự kết hợp [...].", ["CN Mác + phong trào công nhân", "CN Mác + PT công nhân + PT yêu nước", "CN Mác + PT công nhân + PT nông dân", "Cả A, B, C đều sai"], 0],
+        [2, "Tổ chức chính trị cao nhất để lãnh đạo GCCN thực hiện sứ mệnh lịch sử là [...].", ["Công đoàn", "Nghiệp đoàn", "Đảng cộng sản", "Cả A, B, C"], 2],
+        [2, "Phong trào đấu tranh của GCCN chỉ trở thành phong trào chính trị khi có sự lãnh đạo của?", ["Đảng cộng sản", "Công đoàn", "Nghiệp đoàn", "Cả A, B, C"], 0],
+        [2, "Thực hiện CNH, HĐH... là nhiệm vụ của GCCN trên lĩnh vực [...].", ["kinh tế", "tư tưởng", "chính trị - xã hội", "văn hoá"], 0],
+        [2, "Lật đổ GCTS, giành quyền lực, thiết lập nhà nước... là nhiệm vụ của GCCN trên lĩnh vực [...].", ["chính trị - xã hội", "kinh tế", "văn hoá", "tư tưởng"], 0],
+        [2, "Sử dụng nhà nước để cải tạo xã hội cũ, xây dựng xã hội mới... là nhiệm vụ trên lĩnh vực [...].", ["kinh tế", "chính trị - xã hội", "văn hoá", "tư tưởng"], 1],
+        [2, "Trong chế độ TBCN, thông qua sự lãnh đạo của ĐCS, giai cấp công nhân [...].", ["Nhận thức được vị trí, vai trò", "Hiểu được con đường đấu tranh", "Tập hợp được quần chúng", "Cả A, B, C"], 3],
+        [2, "Trong mối quan hệ với GCCN và nhân dân lao động, Đảng cộng sản là [...].", ["Đội tiên phong", "Lãnh tụ chính trị", "Bộ tham mưu", "Cả A, B, C"], 3],
+        [2, "Trong mối quan hệ với Đảng cộng sản, giai cấp công nhân là [...].", ["Cơ sở kinh tế", "Cơ sở xã hội", "Cơ sở văn hóa", "Cơ sở chính trị"], 1],
+        [2, "Xây dựng hệ giá trị mới: lao động; công bằng; dân chủ; bình đẳng... là nhiệm vụ lĩnh vực [...].", ["kinh tế", "chính trị", "xã hội", "văn hoá, tư tưởng"], 3],
+        [2, "Xây dựng và củng cố ý thức hệ tiên tiến của GCCN, khắc phục ý thức hệ tư sản là nhiệm vụ [...].", ["kinh tế", "chính trị", "văn hoá, tư tưởng", "xã hội"], 2],
+        [2, "Tiếp thu có chọn lọc tinh hoa văn hoá nhân loại... là nhiệm vụ trong lĩnh vực [...].", ["Kinh tế", "Chính trị", "Văn hoá, tư tưởng", "Xã hội"], 2],
+        [2, "Cải tạo cái cũ, xây dựng cái mới trong ý thức tư tưởng, tâm lí, lối sống là nhiệm vụ lĩnh vực [...].", ["Tâm lí, ý thức", "Chính trị", "Văn hóa, tư tưởng", "Xã hội"], 2],
+        [2, "Xây dựng con người mới, đạo đức và lối sống mới XHCN là nhiệm vụ lĩnh vực [...].", ["Tâm lý, ý thức", "Đạo đức", "Văn hoá, tư tưởng", "Xã hội"], 2],
+        [2, "Sứ mệnh lịch sử của GCCN không phải là thay thế chế độ sở hữu tư nhân này bằng chế độ sở hữu tư nhân khác mà là [...].", ["xoá bỏ một phần tư hữu", "xóa bỏ triệt để tư hũu về TLSX chủ yếu", "xoá bỏ hoàn toàn công hữu", "xoá bỏ phần lớn tư hữu"], 1],
+        [2, "Mục tiêu cao nhất trong việc thực hiện sứ mệnh lịch sử thế giới của GCCN là [...].", ["giải phóng dân tộc", "giải phóng nông dân", "giải phóng con người", "giành chính quyền"], 2],
+        [2, "Trong mối quan hệ với Đảng cộng sản, giai cấp công nhân là nguồn bổ sung lực lượng cho [...].", ["Đảng cộng sản", "Nhà nước XHCN", "Các tổ chức chính trị - xã hội", "Cả A, B, C đều sai"], 0],
+        [2, "Cách mạng xã hội chủ nghĩa là cuộc cách mạng nhằm [...].", ["Thay chế độ chiếm hữu nô lệ...", "Thay chế độ phong kiến...", "Thay chế độ TBCN bằng chế độ XHCN", "Cả A, B, C đều sai"], 2],
+        [2, "Theo quan điểm của CN Mác - Lênin, CMXHCN được hiểu theo mấy nghĩa?", ["2", "3", "4", "5"], 0],
+        [2, "Theo nghĩa hẹp, cách mạng xã hội chủ nghĩa là cuộc cách mạng [...].", ["Kinh tế", "Chính trị", "Văn hóa", "Cả A, B, C"], 1],
+        [2, "Theo nghĩa rộng, cách mạng xã hội chủ nghĩa là cuộc cách mạng [...].", ["Giành chính quyền nhà nước", "Cải tạo xã hội cũ", "Xây dựng chế độ XHCN và CSCN", "Cả A, B, C"], 3],
+        [2, "Sự sụp đổ của GCTS và thắng lợi của GCVS đều là tất yếu như nhau phản ánh [...].", ["Tính tất yếu khách quan quy định sứ mệnh lịch sử của GCCN", "Tính tất yếu chủ quan", "Nguyện vọng giải phóng", "Vai trò của Đảng"], 0],
+        [2, "Sứ mệnh lịch sử thế giới của giai cấp công nhân được quy định bởi [...].", ["địa vị kinh tế, chính trị – xã hội", "nguyện vọng GCCN", "sự lãnh đạo của Đảng", "nguyện vọng nhân dân"], 0],
+        [2, "Giai cấp công nhân đại diện cho [...].", ["PTSX lỗi thời và LLSX hiện đại", "PTSX tiên tiến và LLSX lạc hậu", "PTSX tiên tiến và LLSX hiện đại", "PTSX lỗi thời và LLSX lạc hậu"], 2],
+        [2, "Giai cấp công nhân là lực lượng [...].", ["phá vỡ QHSX phong kiến...", "phá vỡ QHSX XHCN...", "phá vỡ QHSX TBCN, giành chính quyền cho nông dân", "phá vỡ QHSX TBCN, giành chính quyền về tay mình"], 3],
+        [2, "Tinh thần đoàn kết, ý thức tổ chức kỉ luật cao là nội dung thể hiện [...].", ["đặc điểm chính trị - xã hội của GCCN", "địa vị kinh tế - xã hội", "thói quen", "đặc điểm con người nói chung"], 0],
+        [2, "Phát biểu nào không đúng về điều kiện khách quan quy định sứ mệnh lịch sử của GCCN?", ["Đại diện cho LLSX hiện đại", "Đại diện cho PTSX tiên tiến", "Đại biểu cho tương lai", "Giai cấp công nhân là giai cấp vô cùng nghèo khổ"], 3],
+        [2, "Giai cấp công nhân đại diện cho LLSX hiện đại, là lực lượng quyết định phá vỡ [...].", ["máy móc", "quan hệ sản xuất TBCN", "quan hệ tư sản và giai tầng khác", "CNTB độc quyền"], 1],
+        [2, "Giai cấp nông dân không thể là giai cấp có sứ mệnh lịch sử thế giới xoá bỏ CNTB vì [...].", ["họ không đại diện cho PTSX tiên tiến", "họ có tư tưởng sở hữu lớn", "số lượng không đông", "thiếu đoàn kết"], 0],
+        [2, "Theo CN Mác - Lênin, mục tiêu chung của cách mạng xã hội chủ nghĩa là [...].", ["Giải phóng nông dân", "Giải phóng công nhân", "Giải phóng dân tộc", "Giải phóng xã hội, giải phóng con người"], 3],
+        [2, "Mục tiêu giai đoạn thứ nhất của cách mạng xã hội chủ nghĩa là [...].", ["Giành chính quyền nhà nước", "Giải phóng xã hội", "Giải phóng con người", "Cả A, B, C"], 0],
+        [2, "Mục tiêu giai đoạn thứ hai của cách mạng xã hội chủ nghĩa là [...].", ["Lật đổ GCTS", "Giành chính quyền", "Tổ chức và xây dựng xã hội mới", "Cả A, B, C đều sai"], 2],
+        [2, "Nguyên nhân sâu xa của mọi cuộc cách mạng xã hội trong lịch sử là mâu thuẫn giữa [...].", ["Giai cấp công nhân và tư sản", "Nông dân và địa chủ", "Nô lệ và chủ nô", "LLSX và QHSX"], 3],
+        [2, "Nội dung nào không phải là đặc điểm chính trị - xã hội của GCCN?", ["Tiên phong cách mạng", "Bản chất quốc tế", "Ý thức, kỉ luật cao", "Đại diện cho LLSX hiện đại"], 3],
+        [2, "Nội dung nào không phải là nguyên nhân của việc GCCN có tính tổ chức kỉ luật cao?", ["Môi trường làm việc công nghiệp", "Sự quản lí của tư sản", "Bản chất sẵn có", "Yêu cầu đấu tranh cách mạng"], 2]
+    ];
+
+    const chapterSelect = document.getElementById('chapterSelect');
+    const quizContainer = document.getElementById('quizContainer');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const totalDisplay = document.getElementById('totalDisplay');
+    const statsBox = document.getElementById('statsBox');
+    
+    let currentQuestions = [];
+    let userAnswers = {};
+
+    function startQuiz() {
+        const selectedChapter = chapterSelect.value;
+        currentQuestions = [];
+        userAnswers = {};
+        
+        // Lọc câu hỏi theo chương
+        if (selectedChapter === 'all') {
+            currentQuestions = db;
+        } else {
+            currentQuestions = db.filter(q => q[0] == selectedChapter);
+        }
+
+        renderQuestions();
+        
+        quizContainer.style.display = 'block';
+        statsBox.style.display = 'block';
+        updateStats();
+        
+        // Cuộn xuống vùng làm bài
+        quizContainer.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function renderQuestions() {
+        quizContainer.innerHTML = '';
+        
+        if (currentQuestions.length === 0) {
+            quizContainer.innerHTML = '<p style="text-align:center">Chưa có dữ liệu cho chương này.</p>';
+            return;
+        }
+
+        currentQuestions.forEach((q, index) => {
+            const card = document.createElement('div');
+            card.className = 'question-card';
+            
+            const questionTitle = document.createElement('div');
+            questionTitle.className = 'question-title';
+            questionTitle.innerHTML = `<span class="badge">Chương ${q[0]}</span> Câu ${index + 1}: ${q[1]}`;
+            
+            const optionsDiv = document.createElement('div');
+            optionsDiv.className = 'options';
+            
+            q[2].forEach((opt, optIndex) => {
+                const label = document.createElement('label');
+                label.className = 'option-label';
+                label.id = `q${index}_opt${optIndex}`;
+                
+                const input = document.createElement('input');
+                input.type = 'radio';
+                input.name = `question_${index}`;
+                input.value = optIndex;
+                input.onclick = () => selectAnswer(index, optIndex);
+                
+                label.appendChild(input);
+                label.appendChild(document.createTextNode(opt));
+                optionsDiv.appendChild(label);
+            });
+            
+            card.appendChild(questionTitle);
+            card.appendChild(optionsDiv);
+            quizContainer.appendChild(card);
+        });
+        
+        totalDisplay.innerText = currentQuestions.length;
+    }
+
+    function selectAnswer(questionIndex, optionIndex) {
+        userAnswers[questionIndex] = optionIndex;
+    }
+
+    function checkAll() {
+        let score = 0;
+        
+        currentQuestions.forEach((q, index) => {
+            const correctAnswer = q[3];
+            const userAnswer = userAnswers[index];
+            
+            // Reset màu sắc
+            for (let i = 0; i < 4; i++) {
+                const label = document.getElementById(`q${index}_opt${i}`);
+                if (label) {
+                    label.classList.remove('correct-answer', 'wrong-answer');
+                }
+            }
+            
+            // Tô màu đáp án đúng
+            const correctLabel = document.getElementById(`q${index}_opt${correctAnswer}`);
+            if (correctLabel) correctLabel.classList.add('correct-answer');
+            
+            // Kiểm tra và tô màu nếu sai
+            if (userAnswer !== undefined) {
+                if (userAnswer === correctAnswer) {
+                    score++;
+                } else {
+                    const wrongLabel = document.getElementById(`q${index}_opt${userAnswer}`);
+                    if (wrongLabel) wrongLabel.classList.add('wrong-answer');
+                }
+            }
+        });
+        
+        scoreDisplay.innerText = score;
+        alert(`Bạn đã hoàn thành! Điểm số: ${score}/${currentQuestions.length}`);
+    }
+
+    function resetQuiz() {
+        if(confirm("Bạn có chắc muốn làm lại từ đầu?")) {
+            userAnswers = {};
+            const inputs = document.querySelectorAll('input[type="radio"]');
+            inputs.forEach(input => input.checked = false);
+            
+            const labels = document.querySelectorAll('.option-label');
+            labels.forEach(label => label.classList.remove('correct-answer', 'wrong-answer'));
+            
+            scoreDisplay.innerText = '0';
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function updateStats() {
+        totalDisplay.innerText = currentQuestions.length;
+    }
+</script>
+
+</body>
+</html>
